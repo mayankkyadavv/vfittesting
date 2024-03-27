@@ -6,6 +6,7 @@ import argparse
 texture_types = ['DIFFUSE', 'NORMAL']
 def bake_textures_for_object(obj, texture_types, output_directory):
     # Ensure the object's material uses nodes
+    print("SCRIPT IS BEING CALLED")
     if not obj.material_slots[0].material.use_nodes:
         print(f"Skipping {obj.name}, material does not use nodes.")
         return
@@ -16,6 +17,7 @@ def bake_textures_for_object(obj, texture_types, output_directory):
     for texture_type in texture_types:
         # Create a new image for the bake
         bake_image_name = f"{obj.name}_{texture_type}_bake"
+        print("image name: ", bake_image_name)
         bake_image = bpy.data.images.new(name=bake_image_name, width=1024, height=1024)
 
         # Assign the image to the object's active material
@@ -24,19 +26,30 @@ def bake_textures_for_object(obj, texture_types, output_directory):
         nodes = node_tree.nodes
         for node in nodes:
             if node.type == 'TEX_IMAGE':
+                print("Node selected!")
                 node.select = True
                 node_tree.nodes.active = node
                 node.image = bake_image
                 break
 
+        print("baking textures!")
         # Bake the texture
-        bpy.ops.object.bake(type=texture_type.upper(), margin=16)
-        
+        bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)
+
+        try:
+            bpy.ops.object.bake(type=texture_type.upper(), margin=16)
+            print("Texture baking done!")
+        except Exception as e:
+            print(f"Error during baking: {e}")
+
         # Save the baked image
+        print("attempting to save!")
         bake_image.filepath_raw = f"{output_directory}/{bake_image_name}.png"
         bake_image.file_format = 'PNG'
         bake_image.save()
         bpy.data.images.remove(bake_image)
+        print("exiting function!")
 
 
 def create_human(name, age, height, skin_dict, body_dict, cloth_selection):
@@ -150,7 +163,7 @@ def main():
     for obj in bpy.context.scene.objects:
         if obj.type == 'MESH':
             print(obj.name)
-            #bake_textures_for_object(obj, texture_types, output_directory)
+            bake_textures_for_object(obj, texture_types, output_directory)
 
     # Export the model with materials in GLB format
     output_directory_name = f"{output_directory}/{name}.glb"
